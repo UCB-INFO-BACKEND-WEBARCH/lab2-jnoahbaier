@@ -5,7 +5,6 @@ Lab 2: External API Integration — Student Records + AI Advice
 CRUD endpoints (below) are COMPLETE. Do NOT modify them.
 Your task: implement the two advice endpoints marked with TODO.
 """
-
 import os
 from flask import Flask, request, jsonify
 from dotenv import load_dotenv
@@ -162,7 +161,25 @@ def _generate_advice_from_openai(major):
 
 @app.post('/students/<int:student_id>/advice')
 def generate_advice(student_id):
-    pass  # TODO: Replace with your implementation
+    
+    student = students.get(student_id)
+    if not student:
+        return jsonify({"error": "Student not found"}), 404
+    
+    if not student.get("major"):
+        return jsonify({"error": "Student major is required to generate advice"}), 400
+    
+    try: 
+        advice = _generate_advice_from_openai(student.get("major"))
+        student["advice"] = advice
+    except Exception as e:
+        app.logger.error(f"OpenAI error: {e}")
+        return jsonify({"error": "Upstream AI service failed"}), 502
+    
+    
+
+    return jsonify({"id": student["id"], "major": student["major"], "advice": advice}), 200
+
 
 
 # --- Endpoint B: GET /students/<id>/advice ---
@@ -177,7 +194,16 @@ def generate_advice(student_id):
 
 @app.get('/students/<int:student_id>/advice')
 def get_advice(student_id):
-    pass  # TODO: Replace with your implementation
+    student = students.get(student_id)
+    if not student:
+        return jsonify({"error": "Student not found"}), 404
+    
+    if not student.get("advice"):
+        return jsonify({"error": "Advice not found for this student"}), 400
+    
+    advice = student.get("advice")
+    return jsonify({"id": student["id"], "major": student["major"], "advice": advice}), 200
+    
 
 
 # =============================================================================
